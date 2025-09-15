@@ -13,27 +13,13 @@ import {
   Line,
   CartesianGrid,
   Legend,
-  ScatterChart,
-  Scatter,
   PieChart,
   Pie,
   Cell,
 } from "recharts";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
-
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs";
-
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Brain, AlertTriangle, Target, TrendingUp } from "lucide-react";
 
 /* ---------------- Sample Data ---------------- */
@@ -81,30 +67,22 @@ const weeklyTrendsData = [
   { day: "Sat", risk1: 34, risk2: 39, risk3: 20 },
   { day: "Sun", risk1: 37, risk2: 44, risk3: 22 },
 ];
-
-const dataCorrelationData = [
-  { x: 10, y: 20 },
-  { x: 20, y: 30 },
-  { x: 30, y: 25 },
-  { x: 40, y: 45 },
-  { x: 50, y: 35 },
-];
 /* ------------------------------------------------------------------------------ */
 
 export default function AIMLInsightsPage() {
-  // controls for the search/filter UI
-  const [query, setQuery] = useState("");
-  const [area, setArea] = useState("All Areas");
-  const [device, setDevice] = useState("All Devices");
+  // Strongly typed tab state
   const [activeTab, setActiveTab] = useState<
     "predictions" | "confidence" | "trends" | "correlation"
   >("predictions");
 
-  // simple list of areas/devices (mock)
+  const [query, setQuery] = useState("");
+  const [area, setArea] = useState("All Areas");
+  const [device, setDevice] = useState("All Devices");
+
   const areas = ["All Areas", "Area A", "Area B", "Area C"];
   const devices = ["All Devices", "WQ-001", "WQ-002", "WQ-003"];
 
-  // filtered predictions table (by query/area/device)
+  // filtered predictions
   const filteredPredictions = useMemo(() => {
     return diseasePredictions.filter((d) => {
       const q = query.trim().toLowerCase();
@@ -113,7 +91,6 @@ export default function AIMLInsightsPage() {
         d.disease.toLowerCase().includes(q) ||
         d.area?.toLowerCase().includes(q);
       const matchesArea = area === "All Areas" || d.area === area;
-      // device filtering not used in mock but kept for UI parity
       const matchesDevice = device === "All Devices" || device === "";
       return matchesQuery && matchesArea && matchesDevice;
     });
@@ -128,7 +105,7 @@ export default function AIMLInsightsPage() {
           Advanced disease outbreak predictions and analysis
         </p>
 
-        {/* Search & filters under the headline */}
+        {/* Filters */}
         <div className="mt-6 flex flex-wrap gap-3 items-center">
           <div className="flex-1 min-w-[220px]">
             <input
@@ -141,45 +118,29 @@ export default function AIMLInsightsPage() {
             />
           </div>
 
-          <div>
-            <label htmlFor="areaSelect" className="sr-only">
-              Area
-            </label>
-            <select
-              id="areaSelect"
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              {areas.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            {areas.map((a) => (
+              <option key={a}>{a}</option>
+            ))}
+          </select>
 
-          <div>
-            <label htmlFor="deviceSelect" className="sr-only">
-              Device
-            </label>
-            <select
-              id="deviceSelect"
-              value={device}
-              onChange={(e) => setDevice(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              {devices.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={device}
+            onChange={(e) => setDevice(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            {devices.map((d) => (
+              <option key={d}>{d}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Top stat cards */}
+      {/* Stat Cards */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="flex items-center justify-between p-5">
@@ -238,9 +199,17 @@ export default function AIMLInsightsPage() {
         </Card>
       </div>
 
-      {/* Tabs + Charts */}
+      {/* Tabs */}
       <div className="max-w-7xl mx-auto">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v: string) =>
+            setActiveTab(
+              v as "predictions" | "confidence" | "trends" | "correlation"
+            )
+          }
+          className="w-full"
+        >
           <TabsList className="mb-4">
             <TabsTrigger value="predictions">Disease Predictions</TabsTrigger>
             <TabsTrigger value="confidence">Model Confidence</TabsTrigger>
@@ -248,225 +217,93 @@ export default function AIMLInsightsPage() {
             <TabsTrigger value="correlation">Data Correlation</TabsTrigger>
           </TabsList>
 
-          {/* Disease Predictions */}
+          {/* Tab Contents */}
           <TabsContent value="predictions">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Disease Predictions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="p-3 text-left">Disease</th>
-                        <th className="p-3 text-left">Risk Level</th>
-                        <th className="p-3 text-left">Confidence</th>
-                        <th className="p-3 text-left">Area</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredPredictions.map((d, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="p-3 font-medium">{d.disease}</td>
-                          <td
-                            className={`p-3 font-semibold ${
-                              d.risk === "High"
-                                ? "text-red-600"
-                                : d.risk === "Medium"
-                                ? "text-yellow-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            {d.risk}
-                          </td>
-                          <td className="p-3">{d.confidence}%</td>
-                          <td className="p-3 text-gray-600">{d.area}</td>
-                        </tr>
-                      ))}
-                      {filteredPredictions.length === 0 && (
-                        <tr>
-                          <td colSpan={4} className="p-6 text-center text-gray-500">
-                            No predictions match your filters.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Disease Outbreak Probabilities</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[320px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={diseaseChartData}>
-                      <XAxis dataKey="name" stroke="#9CA3AF" />
-                      <YAxis stroke="#9CA3AF" />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#3b82f6" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Disease Predictions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {filteredPredictions.map((p, i) => (
+                  <div key={i} className="p-2 border-b last:border-none">
+                    <p className="font-medium">{p.disease}</p>
+                    <p className="text-sm text-gray-600">
+                      Risk: {p.risk} | Confidence: {p.confidence}% | Area: {p.area}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          {/* Model Confidence */}
           <TabsContent value="confidence">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Pie Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Model Confidence Distribution</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[360px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={confidenceDistributionData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={120}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}%`}
-                      >
-                        <Cell fill="#10b981" /> {/* green */}
-                        <Cell fill="#f59e0b" /> {/* orange */}
-                        <Cell fill="#ef4444" /> {/* red */}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Progress Bars */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Prediction Confidence by Disease</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {predictionConfidenceByDisease.map((d) => (
-                    <div key={d.disease}>
-                      <div className="flex justify-between text-sm font-medium mb-1">
-                        <span>{d.disease}</span>
-                        <span>{d.confidence}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div
-                          className="bg-blue-600 h-2.5 rounded-full"
-                          style={{ width: `${d.confidence}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Model Confidence Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={confidenceDistributionData}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={100}
+                      fill="#8884d8"
+                      label
+                    >
+                      {confidenceDistributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={["#4CAF50", "#FF9800", "#F44336"][index % 3]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          {/* Weekly Trends */}
           <TabsContent value="trends">
             <Card>
               <CardHeader>
-                <CardTitle>7-Day Prediction Trends</CardTitle>
+                <CardTitle>Weekly Risk Trends</CardTitle>
               </CardHeader>
-              <CardContent className="h-[420px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={weeklyTrendsData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="day" stroke="#6B7280" />
-                    <YAxis stroke="#6B7280" />
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="risk1" stroke="#3b82f6" />
-                    <Line type="monotone" dataKey="risk2" stroke="#ef4444" />
-                    <Line type="monotone" dataKey="risk3" stroke="#22c55e" />
+                    <Line type="monotone" dataKey="risk1" stroke="#8884d8" />
+                    <Line type="monotone" dataKey="risk2" stroke="#82ca9d" />
+                    <Line type="monotone" dataKey="risk3" stroke="#ffc658" />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Data Correlation */}
-{/* Data Correlation → Replaced with Final Combined Prediction */}
-<TabsContent value="correlation">
-  <Card>
-    <CardHeader>
-      <CardTitle>Final Combined Prediction</CardTitle>
-      <p className="text-sm text-gray-500">
-        Weighted analysis combining AI/ML, IoT sensor data, and field reports
-      </p>
-    </CardHeader>
-
-    <CardContent>
-      {/* Current Risk Assessment Section */}
-      <div className="bg-blue-50 p-6 rounded-xl mb-6">
-        {/* Heading with Risk Label + Percentage */}
-        <h3 className="text-xl font-bold text-center text-blue-900 mb-4">
-          Current Risk Assessment
-        </h3>
-        <div className="flex justify-center items-center mb-6">
-          <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold mr-3">
-            MEDIUM RISK
-          </span>
-          <span className="text-3xl font-extrabold text-blue-700">68%</span>
-        </div>
-
-        {/* Cards Row */}
-        <div className="flex justify-center items-stretch gap-6">
-          {/* AI/ML Model */}
-          <div className="bg-white shadow-md rounded-lg p-4 flex-1 text-center">
-            <p className="text-gray-500 font-medium">AI/ML Model</p>
-            <p className="text-2xl font-bold text-blue-600">72%</p>
-            <p className="text-xs text-gray-500">Weight: 40%</p>
-          </div>
-
-          {/* IoT Sensors */}
-          <div className="bg-white shadow-md rounded-lg p-4 flex-1 text-center">
-            <p className="text-gray-500 font-medium">IoT Sensors</p>
-            <p className="text-2xl font-bold text-green-600">61%</p>
-            <p className="text-xs text-gray-500">Weight: 35%</p>
-          </div>
-
-          {/* Field Reports */}
-          <div className="bg-white shadow-md rounded-lg p-4 flex-1 text-center">
-            <p className="text-gray-500 font-medium">Field Reports</p>
-            <p className="text-2xl font-bold text-orange-600">75%</p>
-            <p className="text-xs text-gray-500">Weight: 25%</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Risk & Protective Factors */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Risk Factors */}
-        <div className="bg-red-50 p-4 rounded-lg">
-          <h4 className="font-bold text-red-600 mb-2">Risk Factors</h4>
-          <ul className="list-disc list-inside text-red-700 space-y-1 text-sm">
-            <li>High turbidity levels in Area C</li>
-            <li>Increased diarrhea cases reported</li>
-            <li>Temperature above normal range</li>
-          </ul>
-        </div>
-
-        {/* Protective Factors */}
-        <div className="bg-green-50 p-4 rounded-lg">
-          <h4 className="font-bold text-green-600 mb-2">Protective Factors</h4>
-          <ul className="list-disc list-inside text-green-700 space-y-1 text-sm">
-            <li>pH levels within safe range</li>
-            <li>Recent water treatment conducted</li>
-            <li>No cholera cases in past 7 days</li>
-          </ul>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-</TabsContent>
+          <TabsContent value="correlation">
+            <Card>
+              <CardHeader>
+                <CardTitle>Disease Correlation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={predictionConfidenceByDisease}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="disease" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="confidence" fill="#8884d8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
