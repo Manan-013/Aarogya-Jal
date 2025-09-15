@@ -12,6 +12,27 @@ import {
   WaterQualityData,
 } from "@/entities/all";
 
+// Ensure WaterQualityData has 'temperature' property
+// If not, extend the type here:
+type WaterQualityDataWithTemperature = WaterQualityData & {
+  temperature?: number;
+  water_level?: number;
+  sensor_name?: string;
+  device_name?: string;
+  location?: string;
+  area?: string;
+  device_id?: string | number;
+  id?: string | number;
+  carbon_pct?: number;
+  pH?: number;
+  tds?: number;
+  turbidity?: number;
+  o2_gas?: number;
+  timestamp?: string;
+};
+
+type AlertDataWithSeverity = AlertData & { severity?: string; title?: string };
+
 import {
   Card,
   CardContent,
@@ -33,10 +54,7 @@ import {
   Legend,
 } from "recharts";
 
-import {
-  CircularProgressbar,
-  buildStyles,
-} from "react-circular-progressbar";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 
 import {
@@ -56,13 +74,20 @@ import {
 function percentForGauge(label: string, value: number) {
   if (!Number.isFinite(value)) return 0;
   switch (label.toLowerCase()) {
-    case "ph": return (value / 14) * 100;
-    case "tds": return (value / 1000) * 100;
-    case "turbidity": return (value / 100) * 100;
-    case "temperature": return (value / 50) * 100;
-    case "odour": return (value / 10) * 100;
-    case "water level": return value;
-    default: return (value / 100) * 100;
+    case "ph":
+      return (value / 14) * 100;
+    case "tds":
+      return (value / 1000) * 100;
+    case "turbidity":
+      return (value / 100) * 100;
+    case "temperature":
+      return (value / 50) * 100;
+    case "carbon %":
+      return value;
+    case "water level":
+      return value;
+    default:
+      return (value / 100) * 100;
   }
 }
 
@@ -87,7 +112,9 @@ function StatusCard({
   return (
     <Card className="p-5 rounded-2xl shadow-sm border bg-white flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <div className={`h-12 w-12 flex items-center justify-center rounded-full ${color} text-white`}>
+        <div
+          className={`h-12 w-12 flex items-center justify-center rounded-full ${color} text-white`}
+        >
           <Icon className="h-6 w-6" />
         </div>
         <div>
@@ -135,11 +162,11 @@ function GaugeCard({
 }
 
 /* ----------------- main dashboard ----------------- */
-export default function Dashboard(): JSX.Element {
+export default function DashboardPage() {
+  const [waterData, setWaterData] = useState<WaterQualityDataWithTemperature[]>([]);
   const [alerts, setAlerts] = useState<AlertData[]>([]);
   const [healthReports, setHealthReports] = useState<HealthReportData[]>([]);
   const [sensors, setSensors] = useState<DeviceStatusData[]>([]);
-  const [waterData, setWaterData] = useState<WaterQualityData[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedArea, setSelectedArea] = useState("All Areas");
@@ -156,7 +183,22 @@ export default function Dashboard(): JSX.Element {
       setAlerts(a || []);
       setHealthReports(h || []);
       setSensors(d || []);
-      setWaterData(w || []);
+      setWaterData(
+        (w || []).map((reading: any, idx: number) => ({
+          id: reading.id ?? idx,
+          device_id: reading.device_id ?? "",
+          pH: reading.pH,
+          tds: reading.tds,
+          turbidity: reading.turbidity,
+          carbon_pct: reading.carbon_pct,
+          temperature: reading.temperature,
+          water_level: reading.water_level,
+          o2_gas: reading.o2_gas,
+          location: reading.location || reading.area,
+          sensor_name: reading.sensor_name || reading.device_name,
+          timestamp: reading.timestamp ?? "",
+        }))
+      );
     } catch (err) {
       console.error("Failed to load dashboard data", err);
     }
@@ -172,7 +214,7 @@ export default function Dashboard(): JSX.Element {
   const riskLevel = pendingAlerts > 2 ? "High" : "Low";
 
   const areaOptions = useMemo(
-    () => ["All Areas", ...new Set(waterData.map((w: any) => w.location || w.area || ""))],
+    () => ["All Areas", ...new Set(waterData.map((w: any) => w.location || ""))],
     [waterData]
   );
   const sensorOptions = useMemo(
@@ -202,10 +244,11 @@ export default function Dashboard(): JSX.Element {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="px-4 lg:px-6 space-y-8">
-
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Health Surveillance Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Health Surveillance Dashboard
+          </h1>
           <p className="text-gray-500 text-sm mt-1">
             Real-time monitoring of waterborne disease risks across communities
           </p>
@@ -213,10 +256,34 @@ export default function Dashboard(): JSX.Element {
 
         {/* Status Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatusCard title="Risk Level" value={riskLevel} icon={AlertTriangle} color="bg-red-500" trend="↓ 15% from last week" />
-          <StatusCard title="Active IoT Sensors" value={`${activeSensors}/${sensors.length}`} icon={Wifi} color="bg-blue-500" trend="2 sensors offline" />
-          <StatusCard title="Reports Today" value={recentReports} icon={FileText} color="bg-green-500" trend="↑ 12% increase" />
-          <StatusCard title="Pending Alerts" value={pendingAlerts} icon={Activity} color="bg-purple-500" trend="3 high priority" />
+          <StatusCard
+            title="Risk Level"
+            value={riskLevel}
+            icon={AlertTriangle}
+            color="bg-red-500"
+            trend="↓ 15% from last week"
+          />
+          <StatusCard
+            title="Active IoT Sensors"
+            value={`${activeSensors}/${sensors.length}`}
+            icon={Wifi}
+            color="bg-blue-500"
+            trend="2 sensors offline"
+          />
+          <StatusCard
+            title="Reports Today"
+            value={recentReports}
+            icon={FileText}
+            color="bg-green-500"
+            trend="↑ 12% increase"
+          />
+          <StatusCard
+            title="Pending Alerts"
+            value={pendingAlerts}
+            icon={Activity}
+            color="bg-purple-500"
+            trend="3 high priority"
+          />
         </div>
 
         {/* Live Water Quality */}
@@ -224,7 +291,9 @@ export default function Dashboard(): JSX.Element {
           <CardHeader className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Droplet className="text-blue-500 h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">Live Water Quality Monitoring</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Live Water Quality Monitoring
+              </CardTitle>
             </div>
 
             {/* Search + filters */}
@@ -265,12 +334,42 @@ export default function Dashboard(): JSX.Element {
 
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-              <GaugeCard label="pH" value={firstWater?.pH ?? 7.2} unit="" color="#22c55e" />
-              <GaugeCard label="TDS" value={firstWater?.tds ?? 450} unit="mg/L" color="#3b82f6" />
-              <GaugeCard label="Turbidity" value={firstWater?.turbidity ?? 2.3} unit="NTU" color="#f59e0b" />
-              <GaugeCard label="Temperature" value={firstWater?.temperature ?? 24.5} unit="°C" color="#10b981" />
-              <GaugeCard label="Odour" value={firstWater?.odour ?? 2} unit="Level" color="#8b5cf6" />
-              <GaugeCard label="Water Level" value={firstWater?.water_level ?? 85} unit="%" color="#06b6d4" />
+              <GaugeCard
+                label="pH"
+                value={firstWater?.pH ?? 7.2}
+                unit=""
+                color="#22c55e"
+              />
+              <GaugeCard
+                label="TDS"
+                value={firstWater?.tds ?? 450}
+                unit="mg/L"
+                color="#3b82f6"
+              />
+              <GaugeCard
+                label="Turbidity"
+                value={firstWater?.turbidity ?? 2.3}
+                unit="NTU"
+                color="#f59e0b"
+              />
+              <GaugeCard
+                label="Temperature"
+                value={firstWater?.temperature ?? 24.5}
+                unit="°C"
+                color="#10b981"
+              />
+              <GaugeCard
+                label="Carbon %"
+                value={firstWater?.carbon_pct ?? 2}
+                unit="%"
+                color="#8b5cf6"
+              />
+              <GaugeCard
+                label="Water Level"
+                value={firstWater?.water_level ?? 50}
+                unit="%"
+                color="#06b6d4"
+              />
             </div>
           </CardContent>
         </Card>
@@ -279,8 +378,12 @@ export default function Dashboard(): JSX.Element {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 rounded-2xl shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Disease Risk Analysis</CardTitle>
-              <p className="text-sm text-gray-500">Predicted outbreak probabilities by location</p>
+              <CardTitle className="text-lg font-semibold">
+                Disease Risk Analysis
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Predicted outbreak probabilities by location
+              </p>
             </CardHeader>
             <CardContent className="space-y-10">
               <ResponsiveContainer width="100%" height={320}>
@@ -292,7 +395,11 @@ export default function Dashboard(): JSX.Element {
                   <Legend />
                   <Bar dataKey="Cholera" fill="#ef4444" radius={[6, 6, 0, 0]} />
                   <Bar dataKey="Typhoid" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="Diarrhea" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  <Bar
+                    dataKey="Diarrhea"
+                    fill="#10b981"
+                    radius={[6, 6, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
 
@@ -304,42 +411,66 @@ export default function Dashboard(): JSX.Element {
                     <XAxis dataKey="day" />
                     <YAxis />
                     <Tooltip />
-                    <Line type="monotone" dataKey="risk" stroke="#f59e0b" strokeWidth={3} dot={{ r: 5 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="risk"
+                      stroke="#f59e0b"
+                      strokeWidth={3}
+                      dot={{ r: 5 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
 
+          {/* Alerts List */}
           <Card className="rounded-2xl shadow-md">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Recent Alerts</CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-4">
-                {alerts.slice(0, 5).map((alert, idx) => (
-                  <li key={idx} className="p-4 border rounded-xl bg-white shadow-sm space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                        <p className="text-sm font-semibold text-gray-800">{alert.message}</p>
+              <ul className="space-y-3">
+                {(alerts.slice(0, 5) as AlertDataWithSeverity[]).map(
+                  (alert, idx) => (
+                    <li
+                      key={idx}
+                      className="p-4 border rounded-xl bg-white shadow-sm space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-red-500" />
+                          <p className="text-sm font-semibold text-gray-800 truncate">
+                            {alert.title || ""}
+                          </p>
+                        </div>
+                        <Badge
+                          className={`px-3 py-1 text-xs rounded-full ${
+                            (alert.severity ?? "low") === "high"
+                              ? "bg-red-100 text-red-600"
+                              : (alert.severity ?? "low") === "medium"
+                              ? "bg-yellow-100 text-yellow-600"
+                              : "bg-green-100 text-green-600"
+                          }`}
+                        >
+                          {alert.severity ?? "low"}
+                        </Badge>
                       </div>
-                      <Badge className={`px-3 py-1 text-xs rounded-full ${
-                        alert.severity === "high"
-                          ? "bg-red-100 text-red-600"
-                          : alert.severity === "medium"
-                          ? "bg-yellow-100 text-yellow-600"
-                          : "bg-green-100 text-green-600"
-                      }`}>
-                        {alert.severity}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{alert.timestamp ? new Date(String(alert.timestamp)).toLocaleString() : ""}</span>
-                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{alert.location?.village || "Unknown"}</span>
-                    </div>
-                  </li>
-                ))}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {alert.timestamp
+                            ? new Date(String(alert.timestamp)).toLocaleString()
+                            : ""}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {alert.location?.village || "Unknown"}
+                        </span>
+                      </div>
+                    </li>
+                  )
+                )}
               </ul>
             </CardContent>
           </Card>
@@ -354,12 +485,31 @@ export default function Dashboard(): JSX.Element {
             <CardContent>
               <ul className="space-y-4">
                 {sensors.map((s, idx) => (
-                  <li key={idx} className="flex items-center justify-between p-4 border rounded-xl bg-white shadow-sm">
+                  <li
+                    key={idx}
+                    className="flex items-center justify-between p-4 border rounded-xl bg-white shadow-sm"
+                  >
                     <div className="flex items-center gap-3">
-                      {s.status === "online" ? <Wifi className="text-green-500 h-5 w-5" /> : s.status === "offline" ? <WifiOff className="text-red-500 h-5 w-5" /> : <Wrench className="text-yellow-500 h-5 w-5" />}
-                      <span className="font-medium text-sm text-gray-800">{(s as any).name || s.id || "Unnamed Sensor"}</span>
+                      {s.status === "online" ? (
+                        <Wifi className="text-green-500 h-5 w-5" />
+                      ) : s.status === "offline" ? (
+                        <WifiOff className="text-red-500 h-5 w-5" />
+                      ) : (
+                        <Wrench className="text-yellow-500 h-5 w-5" />
+                      )}
+                      <span className="font-medium text-sm text-gray-800">
+                        {(s as any).name || (s as any).device_id || "Unnamed Sensor"}
+                      </span>
                     </div>
-                    <Badge className={`${s.status === "online" ? "bg-green-100 text-green-700" : s.status === "offline" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>
+                    <Badge
+                      className={`${
+                        s.status === "online"
+                          ? "bg-green-100 text-green-700"
+                          : s.status === "offline"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
                       {s.status}
                     </Badge>
                   </li>
@@ -370,7 +520,9 @@ export default function Dashboard(): JSX.Element {
 
           <Card className="rounded-2xl shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Water Quality Metrics</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Water Quality Metrics
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-4">
@@ -379,18 +531,19 @@ export default function Dashboard(): JSX.Element {
                     key={idx}
                     className="flex items-center justify-between p-4 border rounded-xl bg-white shadow-sm"
                   >
-                    {/* Sensor Name */}
                     <span className="text-sm font-semibold text-gray-800">
-                      {w.sensor_name || w.device_name || w.location || w.area || `Sensor ${w.device_id || idx + 1}`}
+                      {w.sensor_name ||
+                        w.device_name ||
+                        w.location ||
+                        w.area ||
+                        `Sensor ${w.device_id || idx + 1}`}
                     </span>
-
-                    {/* Metrics */}
                     <span className="text-xs text-gray-500">
-                      pH: {formatValue(w.pH)} | 
-                      Turbidity: {formatValue(w.turbidity)} NTU | 
-                      Temp: {formatValue(w.temperature)} °C | 
-                      Water Level: {formatValue(w.water_level)} % | 
-                      O₂ Gas: {formatValue(w.o2_gas)}
+                      pH: {formatValue(w.pH)} | Turbidity:{" "}
+                      {formatValue(w.turbidity)} NTU | Temp:{" "}
+                      {formatValue(w.temperature)} °C | Water Level:{" "}
+                      {formatValue(w.water_level)} % | Carbon %:{" "}
+                      {formatValue(w.carbon_pct)}
                     </span>
                   </li>
                 ))}
@@ -402,3 +555,4 @@ export default function Dashboard(): JSX.Element {
     </div>
   );
 }
+
