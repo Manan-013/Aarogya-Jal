@@ -201,16 +201,10 @@ export default function AIMLInsightsPage() {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto">
-        <Tabs
-          value={activeTab}
-          onValueChange={(v: string) =>
-            setActiveTab(
-              v as "predictions" | "confidence" | "trends" | "correlation"
-            )
-          }
-          className="w-full"
-        >
-          <TabsList className="mb-4">
+      <Tabs
+        defaultValue={activeTab}
+      >
+          <TabsList>
             <TabsTrigger value="predictions">Disease Predictions</TabsTrigger>
             <TabsTrigger value="confidence">Model Confidence</TabsTrigger>
             <TabsTrigger value="trends">Weekly Trends</TabsTrigger>
